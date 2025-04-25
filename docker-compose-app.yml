@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  localstack:
+    container_name: "localstack"
+    image: localstack/localstack
+    ports:
+      - 4566:4566
+    environment:
+      - SERVICES=dynamodb
+      - EDGE_PORT=4566
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - shared-network
+
+  container-native-image:
+    image: container-native-image:1.0.0
+    container_name: container-native-image
+    ports:
+      - "8081:8081"
+    environment:
+      AWS_REGION: sa-east-1
+      AWS_ACCESS_KEY_ID: dummy
+      AWS_SECRET_ACCESS_KEY: dummy
+      AWS_ENDPOINT_OVERRIDE: http://localstack:4566
+    depends_on:
+      - localstack
+    networks:
+      - shared-network
+
+networks:
+  shared-network:
+    driver: bridge

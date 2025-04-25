@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  localstack:
+    container_name: "localstack"
+    image: localstack/localstack
+    ports:
+      - 4566:4566
+    environment:
+      - SERVICES=dynamodb
+      - EDGE_PORT=4566
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - shared-network
+
+  dynamo-hints:
+    image: ghcr.io/graalvm/jdk-community:21
+    container_name: graalvm-agent
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./:/app
+      - ./graal-hints:/hints
+    working_dir: /app
+    environment:
+      AWS_REGION: sa-east-1
+      AWS_ACCESS_KEY_ID: dummy
+      AWS_SECRET_ACCESS_KEY: dummy
+      AWS_ENDPOINT_OVERRIDE: http://localstack:4566
+    command: >
+      java -agentlib:native-image-agent=config-output-dir=/hints -jar target/native-image-container-1.0.0.jar
+    depends_on:
+      - localstack
+    networks:
+      - shared-network
+
+networks:
+  shared-network:
+    driver: bridge
